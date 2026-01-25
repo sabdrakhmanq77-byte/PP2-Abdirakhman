@@ -1,6 +1,0 @@
-f=input('')
-fi=int(f)
-s=input('')
-si=int(s)
-answf=int(fi%si)
-print(answf)
