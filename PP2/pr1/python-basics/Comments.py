@@ -6,5 +6,5 @@ print("Hello, World!") #This is a comment
 print("Hello, World!") 
 
 #print("Hello, World!")
-print("Cheers, Friend!")
+print("Cheers, friend!")
 # A comment does not have to be text that explains the code, it can also be used to prevent Python from executing code
