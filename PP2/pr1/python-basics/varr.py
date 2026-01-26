@@ -4,3 +4,6 @@ z=float(3)
 print(x)
 print(y)
 print(z)
+
+a=str('def')
+print(y+a)
