@@ -1,0 +1,10 @@
+x = str("Hello World")
+y = int(20)
+z = float(5.5)
+t= complex(1j)
+l= list(("apple", "banana", "cherry"))
+d= dict(name="John", age=36)
+s= set(("apple", "banana", "cherry"))
+b= bool(5>3)
+
+print(x,y,z,t,l,d,s,b)
