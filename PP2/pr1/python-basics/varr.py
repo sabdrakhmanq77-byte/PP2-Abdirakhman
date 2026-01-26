@@ -7,3 +7,8 @@ print(z)
 
 a=str('def')
 print(y+a)
+
+# defining global variable
+def myfunc():
+    print('2+3='+str(x))
+myfunc()
