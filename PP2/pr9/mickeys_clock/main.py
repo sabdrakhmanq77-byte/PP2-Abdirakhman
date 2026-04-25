@@ -6,7 +6,7 @@ from clock import MickeyClock
 def main():
     pygame.init()
     screen = pygame.display.set_mode((800, 800))
-    pygame.display.set_caption("Mickey Clock Final")
+    pygame.display.set_caption("Mickey Clock")
     clock = pygame.time.Clock()
 
     mickey_clock = MickeyClock(screen)
