@@ -67,11 +67,11 @@ while running:
             current_tool.on_key_down(event, canvas, current_color)
 
             # сохранение Ctrl+S
-            if event.key == pygame.K_s and pygame.key.get_mods() & pygame.KMOD_CTRL:
-                now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-                filename = f"saved_images/{now}.png"
-                pygame.image.save(canvas, filename)
-                print("Сохранено:", filename)
+            if event.key == pygame.K_c and pygame.key.get_mods() & pygame.KMOD_CTRL:
+              now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+              filename = f"saved_images/{now}.png"
+              pygame.image.save(canvas, filename)
+              print("Сохранено:", filename)
 
             # инструменты
             if event.key == pygame.K_p:
@@ -80,7 +80,7 @@ while running:
                 current_tool = tools_dict["line"]
             if event.key == pygame.K_r:
                 current_tool = tools_dict["rect"]
-            if event.key == pygame.K_s:
+            if event.key == pygame.K_q:
                 current_tool = tools_dict["square"]
             if event.key == pygame.K_c:
                 current_tool = tools_dict["circle"]

@@ -1,249 +1,209 @@
-import psycopg2
 import json
-from config import DB_CONFIG
+from connect import get_connection
 
-conn = psycopg2.connect(**DB_CONFIG)
-cur = conn.cursor()
-
-
-#HELPER: GET OR CREATE GROUP
-def get_group_id(group_name):
-    cur.execute("SELECT id FROM groups WHERE name=%s", (group_name,))
-    res = cur.fetchone()
-
-    if res:
-        return res[0]
-    else:
-        cur.execute("INSERT INTO groups(name) VALUES (%s) RETURNING id", (group_name,))
-        return cur.fetchone()[0]
-
-
-#ADD CONTACT
 def add_contact():
-    name = input("Name: ")
-    phone = input("Phone: ")
-    email = input("Email: ")
-    birthday = input("Birthday (YYYY-MM-DD): ")
-    group_name = input("Group: ")
-
-    gid = get_group_id(group_name)
-
-    #check if contact exists
-    cur.execute("SELECT id FROM phonebook WHERE name=%s", (name,))
-    existing = cur.fetchone()
-
-    if existing:
-        choice = input("Contact exists. overwrite? (yes/no): ")
-
-        if choice.lower() != "yes":
-            print("Skipped")
-            return
-
-        cur.execute("""
-            UPDATE phonebook
-            SET phone=%s, email=%s, birthday=%s, group_id=%s
-            WHERE name=%s
-        """, (phone, email, birthday, gid, name))
-
-    else:
-        cur.execute("""
-            INSERT INTO phonebook(name, phone, email, birthday, group_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (name, phone, email, birthday, gid))
-
-    conn.commit()
-    print("Done!")
-
-
-#ADD PHONE
-def add_phone():
-    name = input("Name: ")
-    phone = input("New phone: ")
-
-    cur.execute("CALL add_phone(%s, %s)", (name, phone))
-    conn.commit()
-
-
-#FILTER BY GROUP
-def filter_group():
-    group_name = input("Group: ")
-
-    cur.execute("""
-        SELECT p.name, p.phone, p.email
-        FROM phonebook p
-        JOIN groups g ON p.group_id = g.id
-        WHERE g.name = %s
-    """, (group_name,))
-
-    for row in cur.fetchall():
-        print(row)
-
-
-#SEARCH
-def search():
-    q = input("Search: ")
-
-    cur.execute("SELECT * FROM search_contacts(%s::TEXT)", (q,))
-    
-    rows = cur.fetchall()
-
-    if not rows:
-        print("No results")
-    else:
-        for row in rows:
-            print(row)
-
-
-#SORT
-def sort_contacts():
-    field = input("Sort by (name/birthday/created_at): ")
-
-    if field not in ["name", "birthday", "created_at"]:
-        field = "name"
-
-    cur.execute(f"""
-        SELECT name, phone, email, birthday
-        FROM phonebook
-        ORDER BY {field}
-    """)
-
-    for row in cur.fetchall():
-        print(row)
-
-
-#PAGINATION
-def paginate():
-    limit = 3
-    offset = 0
-
-    while True:
-        cur.execute("""
-            SELECT name, phone, email
-            FROM phonebook
-            LIMIT %s OFFSET %s
-        """, (limit, offset))
-
-        rows = cur.fetchall()
-
-        if not rows:
-            print("No more data")
-            break
-
-        for r in rows:
-            print(r)
-
-        cmd = input("next / prev / quit: ")
-
-        if cmd == "next":
-            offset += limit
-        elif cmd == "prev":
-            offset = max(0, offset - limit)
-        else:
-            break
-
-
-#EXPORT JSON
-def export_json():
-    cur.execute("""
-        SELECT p.name, p.phone, p.email, p.birthday, g.name
-        FROM phonebook p
-        LEFT JOIN groups g ON p.group_id = g.id
-    """)
-
-    data = []
-    for row in cur.fetchall():
-        data.append({
-            "name": row[0],
-            "phone": row[1],
-            "email": row[2],
-            "birthday": str(row[3]),
-            "group": row[4]
-        })
-
-    with open("contacts.json", "w") as f:
-        json.dump(data, f, indent=4)
-
-    print("Exported!")
-
-
-#IMPORT JSON
-def import_json():
-    with open("contacts.json") as f:
-        data = json.load(f)
-
-    for c in data:
-        gid = get_group_id(c["group"])
-
-        cur.execute("SELECT id FROM phonebook WHERE name=%s", (c["name"],))
-        if cur.fetchone():
-            choice = input(f"{c['name']} exists (skip/overwrite): ")
-
-            if choice == "skip":
-                continue
-            else:
-                cur.execute("DELETE FROM phonebook WHERE name=%s", (c["name"],))
-
-        cur.execute("""
-            INSERT INTO phonebook(name, phone, email, birthday, group_id)
-            VALUES (%s, %s, %s, %s, %s)
-        """, (
-            c["name"], c["phone"], c["email"], c["birthday"], gid
-        ))
-
-    conn.commit()
-    print("Imported!")
-
-def delete_contact():
-    name = input("Enter name to delete: ")
-
     try:
-        cur.execute("CALL delete_contact(%s)", (name,))
+        name = input("Name: ")
+        email = input("Email: ")
+        birthday = input("Birthday (YYYY-MM-DD): ")
+        group = input("Group: ")
+
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("INSERT INTO groups(name) VALUES(%s) ON CONFLICT DO NOTHING", (group,))
+        cur.execute("SELECT id FROM groups WHERE name=%s", (group,))
+        group_result = cur.fetchone()
+        if group_result is None:
+            print("Error: Group not found")
+            return
+        gid = group_result[0]
+
+        cur.execute(
+            "INSERT INTO contacts(name,email,birthday,group_id) VALUES(%s,%s,%s,%s)",
+            (name,email,birthday,gid)
+        )
+
         conn.commit()
-        print("Deleted successfully!")
-
+        print("Contact added successfully")
     except Exception as e:
-        conn.rollback()
-        print("Error:", e)
+        print(f"Error adding contact: {e}")
+    finally:
+        cur.close()
+        conn.close()
 
+def search():
+    try:
+        q = input("Search: ")
+        conn = get_connection()
+        cur = conn.cursor()
 
-#MENU
+        cur.execute("SELECT * FROM search_contacts(%s)", (q,))
+        results = cur.fetchall()
+        if not results:
+            print("No results found")
+        else:
+            for row in results:
+                print(row)
+    except Exception as e:
+        print(f"Error searching: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+def filter_group():
+    try:
+        g = input("Group: ")
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT c.name, c.email
+            FROM contacts c
+            JOIN groups g ON c.group_id = g.id
+            WHERE g.name=%s
+        """, (g,))
+
+        results = cur.fetchall()
+        if not results:
+            print("No contacts in this group")
+        else:
+            print(results)
+    except Exception as e:
+        print(f"Error filtering by group: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+def export_json():
+    try:
+        conn = get_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT c.id, c.name, c.email, c.birthday, g.name as group_name
+            FROM contacts c
+            LEFT JOIN groups g ON c.group_id=g.id
+        """)
+
+        contacts = cur.fetchall()
+        data = []
+        
+        for contact in contacts:
+            contact_id, name, email, birthday, group = contact
+            cur.execute("SELECT phone FROM phones WHERE contact_id=%s", (contact_id,))
+            phones = [row[0] for row in cur.fetchall()]
+            
+            data.append({
+                "name": name,
+                "email": email,
+                "birthday": birthday,
+                "group": group,
+                "phones": phones
+            })
+
+        with open("contacts.json","w") as f:
+            json.dump(data, f, indent=4, ensure_ascii=False, default=str)
+
+        print(f"Exported {len(data)} contacts")
+    except Exception as e:
+        print(f"Error exporting: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
+def import_json():
+    try:
+        with open("contacts.json") as f:
+            data = json.load(f)
+
+        conn = get_connection()
+        cur = conn.cursor()
+        imported_count = 0
+
+        for item in data:
+            if isinstance(item, dict):
+                name = item.get("name")
+                email = item.get("email")
+                birthday = item.get("birthday")
+                group = item.get("group")
+                phones = item.get("phones", [])
+            else:
+                name, email, birthday, group, phone = item
+                phones = [phone] if phone else []
+
+            if not name:
+                continue
+
+            cur.execute("SELECT id FROM contacts WHERE name=%s", (name,))
+            exists = cur.fetchone()
+
+            if exists:
+                ans = input(f"{name} exists. overwrite? y/n: ")
+                if ans != "y":
+                    continue
+                cur.execute("DELETE FROM contacts WHERE name=%s", (name,))
+
+            cur.execute("INSERT INTO groups(name) VALUES(%s) ON CONFLICT DO NOTHING", (group,))
+            cur.execute("SELECT id FROM groups WHERE name=%s", (group,))
+            group_result = cur.fetchone()
+            gid = group_result[0] if group_result else None
+
+            cur.execute(
+                "INSERT INTO contacts(name,email,birthday,group_id) VALUES(%s,%s,%s,%s) RETURNING id",
+                (name, email, birthday, gid)
+            )
+            contact_result = cur.fetchone()
+            if contact_result is None:
+                continue
+            cid = contact_result[0]
+
+            for phone in phones:
+                if phone:
+                    cur.execute("INSERT INTO phones(contact_id,phone,type) VALUES(%s,%s,'mobile')", (cid, phone))
+
+            imported_count += 1
+
+        conn.commit()
+        print(f"Imported {imported_count} contacts")
+    except FileNotFoundError:
+        print("Error: contacts.json file not found")
+    except json.JSONDecodeError:
+        print("Error: Invalid JSON file format")
+    except Exception as e:
+        print(f"Error importing: {e}")
+    finally:
+        cur.close()
+        conn.close()
+
 def menu():
     while True:
-        print("""
-1 Add Contact
-2 Add Phone
-3 Filter by Group
-4 Search
-5 Sort
-6 Pagination
-7 Export JSON
-8 Import JSON
-9 Delete Contact
+        try:
+            print("""
+1 Add
+2 Search
+3 Filter by group
+4 Export JSON
+5 Import JSON
 0 Exit
-""")
+        """)
 
-        ch = input("Choose: ")
+            c = input("> ").strip()
 
-        if ch == "1":
-            add_contact()
-        elif ch == "2":
-            add_phone()
-        elif ch == "3":
-            filter_group()
-        elif ch == "4":
-            search()
-        elif ch == "5":
-            sort_contacts()
-        elif ch == "6":
-            paginate()
-        elif ch == "7":
-            export_json()
-        elif ch == "8":
-            import_json()
-        elif ch == "9":
-            delete_contact()
-        else:
+            if c=="1": add_contact()
+            elif c=="2": search()
+            elif c=="3": filter_group()
+            elif c=="4": export_json()
+            elif c=="5": import_json()
+            elif c=="0":
+                print("Goodbye!")
+                break
+            else:
+                print("Invalid option. Please try again.")
+        except KeyboardInterrupt:
+            print("\nGoodbye!")
             break
-
+        except Exception as e:
+            print(f"Error: {e}")
 
 menu()

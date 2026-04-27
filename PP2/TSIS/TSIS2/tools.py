@@ -160,32 +160,6 @@ class FillTool(Tool):
             stack.append((x, y+1))
             stack.append((x, y-1))
 
-
-# Текст
-class TextTool(Tool):
-    def __init__(self):
-        self.text = ""
-        self.pos = (0, 0)
-
-    def on_mouse_down(self, pos, surface, color, thickness, bg_color):
-        self.pos = pos
-        self.text = ""
-
-    def on_key_down(self, event, surface, color):
-        font = pygame.font.SysFont(None, 24)
-        
-        if event.key == pygame.K_BACKSPACE:
-            self.text = self.text[:-1]
-        elif event.key == pygame.K_RETURN:
-            self.text = ""
-        elif event.unicode.isprintable():
-            self.text += event.unicode
-        
-        # отрисовка текста на поверхность
-        if self.text:
-            text_surface = font.render(self.text, True, color)
-            surface.blit(text_surface, self.pos)
-
 class TextTool(Tool):
     def __init__(self):
         self.text = ""
@@ -194,7 +168,6 @@ class TextTool(Tool):
         self.font = pygame.font.SysFont(None, 24)
 
     def on_mouse_down(self, pos, surface, color, thickness, bg_color):
-        # выбираем место для текста
         self.pos = pos
         self.text = ""
         self.active = True
@@ -204,7 +177,7 @@ class TextTool(Tool):
             return
 
         if event.key == pygame.K_RETURN:
-            # завершение ввода текста
+            # сохраняем текст на холсте
             text_surface = self.font.render(self.text, True, color)
             surface.blit(text_surface, self.pos)
             self.active = False
@@ -212,5 +185,5 @@ class TextTool(Tool):
         elif event.key == pygame.K_BACKSPACE:
             self.text = self.text[:-1]
 
-        else:
+        elif event.unicode.isprintable():
             self.text += event.unicode

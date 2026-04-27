@@ -1,5 +1,5 @@
 {
-  "car_color": "red",
-  "music": true,
-  "difficulty": "medium"
+    "car_color": "red",
+    "music": true,
+    "difficulty": "easy"
 }
