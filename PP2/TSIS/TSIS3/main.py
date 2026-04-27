@@ -7,13 +7,8 @@ pygame.init()
 screen = pygame.display.set_mode((400,600))
 
 pygame.mixer.music.load("C:\\Users\\User\\OneDrive\\Desktop\\project\\PP2\\TSIS\\TSIS3\\assets\\The Prodigy - You’ll Be UNDER MY WHEELS.mp3")
-pygame.mixer.music.set_volume(0.5)
 
 while True:
-
-    pygame.mixer.music.load("C:\\Users\\User\\OneDrive\\Desktop\\project\\PP2\\TSIS\\TSIS3\\assets\\The Prodigy - You’ll Be UNDER MY WHEELS.mp3")
-    pygame.mixer.music.set_volume(0.5)
-
     action = menu(screen)
 
     if action == "quit":
@@ -47,5 +42,9 @@ while True:
             if game.is_game_over():
                 game.finish()
                 running = False
+    if game.is_game_over():
+     game.finish()
+     pygame.mixer.music.stop()  # ← ВАЖНО
+     running = False
 
 pygame.quit()

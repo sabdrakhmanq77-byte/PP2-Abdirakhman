@@ -26,6 +26,9 @@ class Game:
 
         self.event_timer = 0
         self.event_active = False
+        self.last_coin = 0
+        self.last_obs = 0
+        self.last_power = 0
 
     def spawn_coin(self):
         value = random.randint(1, 3)
@@ -43,20 +46,22 @@ class Game:
 
     def update(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]: self.player.x -= 5
-        if keys[pygame.K_RIGHT]: self.player.x += 5
+        if keys[pygame.K_LEFT]: self.player.x -= 2
+        if keys[pygame.K_RIGHT]: self.player.x += 2
 
         # границы
         self.player.x = max(50, min(310, self.player.x))
 
         # сложность
-        if self.settings["difficulty"] == "hard":
-            self.speed += 0.001
-        elif self.settings["difficulty"] == "medium":
-            self.speed += 0.0005
+        if self.settings["difficulty"] == "medium":
+          self.speed = 2 + self.score * 0.1
+        elif self.settings["difficulty"] == "hard":
+          self.speed = 2 + self.score * 0.2
+        else:  # easy
+          self.speed = 2
 
         # случайные события
-        if random.random() < 0.002:
+        if not self.event_active and random.random() < 0.001:
             self.event_active = True
             self.event_timer = time.time()
 
@@ -64,12 +69,22 @@ class Game:
             self.event_active = False
 
         # спавн
-        if random.random() < (0.05 if not self.event_active else 0.1):
-            self.spawn_coin()
-        if random.random() < 0.03:
-            self.spawn_obstacle()
-        if random.random() < (0.01 if not self.event_active else 0.05):
-            self.spawn_powerup()
+        now = pygame.time.get_ticks()
+
+        # монеты
+        if now - self.last_coin > (800 if not self.event_active else 300):
+           self.spawn_coin()
+           self.last_coin = now
+
+        # препятствия
+        if now - self.last_obs > 1200:
+         self.spawn_obstacle()
+         self.last_obs = now
+
+        # усиления
+        if now - self.last_power > (5000 if not self.event_active else 2000):
+          self.spawn_powerup()
+          self.last_power = now
 
         # движение
         for coin in self.coins:
