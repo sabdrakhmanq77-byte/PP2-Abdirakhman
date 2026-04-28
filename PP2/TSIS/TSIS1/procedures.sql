@@ -1,57 +1,80 @@
--- добавить телефон
 CREATE OR REPLACE PROCEDURE add_phone(
     p_contact_name VARCHAR,
-    p_phone VARCHAR,
-    p_type VARCHAR
+    p_phone        VARCHAR,
+    p_type         VARCHAR    --'home' | 'work' | 'mobile'
 )
-LANGUAGE plpgsql
-AS $$
-DECLARE cid INT;
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_id INTEGER;
 BEGIN
-    SELECT id INTO cid FROM contacts WHERE name = p_contact_name;
+    -- id find
+    SELECT id INTO v_id FROM contacts WHERE name = p_contact_name;
 
-    IF cid IS NOT NULL THEN
-        INSERT INTO phones(contact_id, phone, type)
-        VALUES (cid, p_phone, p_type);
+    IF v_id IS NULL THEN
+        RAISE NOTICE 'Contact "%" not found', p_contact_name;
+        RETURN;
     END IF;
+
+    INSERT INTO phones (contact_id, phone, type)
+    VALUES (v_id, p_phone, p_type);
+
+    RAISE NOTICE 'Phone added to "%"', p_contact_name;
 END;
 $$;
 
--- сменить группу
 CREATE OR REPLACE PROCEDURE move_to_group(
     p_contact_name VARCHAR,
-    p_group_name VARCHAR
+    p_group_name   VARCHAR
 )
-LANGUAGE plpgsql
-AS $$
-DECLARE gid INT;
-DECLARE cid INT;
+LANGUAGE plpgsql AS $$
+DECLARE
+    v_contact_id INTEGER;
+    v_group_id   INTEGER;
 BEGIN
-    SELECT id INTO gid FROM groups WHERE name = p_group_name;
-
-    IF gid IS NULL THEN
-        INSERT INTO groups(name) VALUES (p_group_name) RETURNING id INTO gid;
+    -- Find contact
+    SELECT id INTO v_contact_id FROM contacts WHERE name = p_contact_name;
+    IF v_contact_id IS NULL THEN
+        RAISE NOTICE 'Contact "%" not found', p_contact_name;
+        RETURN;
     END IF;
 
-    SELECT id INTO cid FROM contacts WHERE name = p_contact_name;
-
-    IF cid IS NOT NULL THEN
-        UPDATE contacts SET group_id = gid WHERE id = cid;
+    -- Find group. Create if doesnt exist
+    SELECT id INTO v_group_id FROM groups WHERE name = p_group_name;
+    IF v_group_id IS NULL THEN
+        INSERT INTO groups (name) VALUES (p_group_name) RETURNING id INTO v_group_id;
+        RAISE NOTICE 'Group "%" created', p_group_name;
     END IF;
+
+    UPDATE contacts SET group_id = v_group_id WHERE id = v_contact_id;
+    RAISE NOTICE 'Contact "%" moved to group "%"', p_contact_name, p_group_name;
 END;
 $$;
 
--- поиск
+
+
 CREATE OR REPLACE FUNCTION search_contacts(p_query TEXT)
-RETURNS TABLE(name TEXT, email TEXT, phone TEXT)
-AS $$
+RETURNS TABLE (
+    id       INTEGER,
+    name     VARCHAR,
+    email    VARCHAR,
+    birthday DATE,
+    grp      VARCHAR
+)
+LANGUAGE plpgsql AS $$
 BEGIN
     RETURN QUERY
-    SELECT c.name, c.email, p.phone
+    SELECT DISTINCT
+        c.id,
+        c.name,
+        c.email,
+        c.birthday,
+        g.name AS grp
     FROM contacts c
-    LEFT JOIN phones p ON c.id = p.contact_id
-    WHERE c.name ILIKE '%'||p_query||'%'
-       OR c.email ILIKE '%'||p_query||'%'
-       OR p.phone ILIKE '%'||p_query||'%';
+    LEFT JOIN groups g ON g.id = c.group_id
+    LEFT JOIN phones  p ON p.contact_id = c.id
+    WHERE
+        c.name  ILIKE '%' || p_query || '%'   -- name
+     OR c.email ILIKE '%' || p_query || '%'   -- email
+     OR p.phone ILIKE '%' || p_query || '%';  -- number
 END;
-$$ LANGUAGE plpgsql;
+$$;

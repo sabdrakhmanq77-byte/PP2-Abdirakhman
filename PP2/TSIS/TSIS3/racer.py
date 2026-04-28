@@ -12,7 +12,7 @@ class Game:
         self.player_name = player_name
 
         self.player = pygame.Rect(180, 500, 40, 60)
-        self.speed = 5
+        self.speed = 1
         self.score = 0
         self.distance = 0
         self.lives = 3
@@ -46,19 +46,19 @@ class Game:
 
     def update(self):
         keys = pygame.key.get_pressed()
-        if keys[pygame.K_LEFT]: self.player.x -= 2
-        if keys[pygame.K_RIGHT]: self.player.x += 2
+        if keys[pygame.K_LEFT]: self.player.x -= 1
+        if keys[pygame.K_RIGHT]: self.player.x += 1
 
         # границы
         self.player.x = max(50, min(310, self.player.x))
 
         # сложность
         if self.settings["difficulty"] == "medium":
-          self.speed = 2 + self.score * 0.1
+            self.speed = 1 + self.score * 0.05
         elif self.settings["difficulty"] == "hard":
-          self.speed = 2 + self.score * 0.2
+            self.speed = 1 + self.score * 0.1
         else:  # easy
-          self.speed = 2
+            self.speed = 1
 
         # случайные события
         if not self.event_active and random.random() < 0.001:
@@ -73,18 +73,18 @@ class Game:
 
         # монеты
         if now - self.last_coin > (800 if not self.event_active else 300):
-           self.spawn_coin()
-           self.last_coin = now
+            self.spawn_coin()
+            self.last_coin = now
 
         # препятствия
         if now - self.last_obs > 1200:
-         self.spawn_obstacle()
-         self.last_obs = now
+            self.spawn_obstacle()
+            self.last_obs = now
 
         # усиления
         if now - self.last_power > (5000 if not self.event_active else 2000):
-          self.spawn_powerup()
-          self.last_power = now
+            self.spawn_powerup()
+            self.last_power = now
 
         # движение
         for coin in self.coins:
@@ -117,14 +117,14 @@ class Game:
         if self.active_power == "nitro":
             if time.time() - self.power_timer > 5:
                 self.active_power = None
-                self.speed -= 3
+                self.speed -= 1
 
         self.distance += self.speed
 
     def activate_power(self, p):
         self.active_power = p
         if p == "nitro":
-            self.speed += 3
+            self.speed += 1
             self.power_timer = time.time()
         elif p == "shield":
             pass

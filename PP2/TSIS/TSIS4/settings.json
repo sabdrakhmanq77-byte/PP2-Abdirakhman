@@ -1,5 +1,10 @@
 {
-    "snake_color": [0, 255, 0],
-    "grid": true,
-    "sound": true
+  "color_name": "\u041a\u0440\u0430\u0441\u043d\u044b\u0439",
+  "music": false,
+  "snake_color": [
+    0,
+    255,
+    0
+  ],
+  "sound": true
 }
