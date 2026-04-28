@@ -134,7 +134,7 @@ class RhombusTool(Tool):
         pygame.draw.polygon(surface, color, points, thickness)
 
 
-# Заливка (простая flood fill)
+# Заливка
 class FillTool(Tool):
     def on_mouse_down(self, pos, surface, color, thickness, bg_color):
         target_color = surface.get_at(pos)

@@ -1,7 +1,7 @@
 import pygame
 import os
 from datetime import datetime
-import tools  # импортируем файл tools.py
+import tools  
 
 pygame.init()
 
@@ -17,7 +17,7 @@ canvas.fill(BG_COLOR)
 current_color = (0, 0, 0)
 thickness = 1
 
-# создаём папку для сохранений (если нет)
+# создаём папку для сохранений
 if not os.path.exists("saved_images"):
     os.makedirs("saved_images")
 
@@ -33,7 +33,7 @@ tools_dict = {
     "rhombus": tools.RhombusTool(),
     "eraser": tools.EraserTool(),
     "fill": tools.FillTool(),
-    "text": tools.TextTool()  # новый инструмент
+    "text": tools.TextTool()  
 }
 
 current_tool = tools_dict["pencil"]
@@ -63,10 +63,10 @@ while running:
         # КЛАВИАТУРА
         if event.type == pygame.KEYDOWN:
 
-            # передаём событие в инструмент (для текста)
+            # передаём событие в инструмент 
             current_tool.on_key_down(event, canvas, current_color)
 
-            # сохранение Ctrl+S
+            # сохранение Ctrl+С
             if event.key == pygame.K_c and pygame.key.get_mods() & pygame.KMOD_CTRL:
               now = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
               filename = f"saved_images/{now}.png"
